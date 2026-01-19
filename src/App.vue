@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import LoginSection from './components/LoginSection.vue'
+import GameSection from './components/GameSection.vue'
 </script>
 
 <template>
@@ -7,7 +7,7 @@ import LoginSection from './components/LoginSection.vue'
     <img alt="Vue logo" class="logo" src="./assets/lyriquiz_logo.png" width="125" height="125" />
 
     <div class="wrapper">
-      <LoginSection msg="Lyriquiz" />
+      <GameSection msg="Lyriquiz" />
     </div>
   </header>
 
