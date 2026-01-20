@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { Ref } from 'vue';
+import $ from 'jquery';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -35,7 +36,7 @@ defineProps<{
 const stateKey = 'code_verifier';
 const client_id: string = '43cee162706f463dbb62be67258fbe2f';
 const redirect_uri: string = '0.0.0.0';
-const numberOfQuestions = 1;
+const numberOfQuestions = 3;
 
 // ============================================================================
 // REACTIVE STATE
@@ -43,7 +44,7 @@ const numberOfQuestions = 1;
 
 let params: Record<string, string> = {};
 const hasAccessToken = ref(!!localStorage.getItem('access_token'));
-const topSong = ref({ 'name': 'Testname', 'artist': 'Testartist' });
+// const topSong = ref({ 'name': 'Testname', 'artist': 'Testartist' });
 
 const currentQuestionSong: Ref<Question> = ref({
   lyrics: '',
@@ -58,6 +59,7 @@ for (let i = 0; i < numberOfQuestions; i++) {
 questionIdices = randomizeArray(questionIdices);
 // const currentlyUsedSong: Song | null = null;
 let sptfySongs: Song[] = [];
+const score: Ref<number | undefined> = ref();
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -151,7 +153,7 @@ function prepareQuestion(fetchedLyrics: string, song: Song): Question {
     const start = indicies[randIndex - 3] !== undefined ? indicies[randIndex - 3] : -1 + 1;
     const end = indicies[randIndex] !== undefined ? indicies[randIndex] + 1 : fetchedLyrics.length;
     questionSnippet = fetchedLyrics.slice(start, end);
-    if(questionSnippet.length < 12){
+    if(questionSnippet.length < 20){
       questionSnippet = fetchedLyrics.slice(0, Math.min(50, fetchedLyrics.length));
     }
     else{
@@ -312,11 +314,11 @@ function fetchSongs(limit: number = 1): Promise<Song[]> {
 
 function fetchLyrics(song: Song): Promise<string> {
   // Placeholder function to simulate fetching lyrics
-  return fetch('https://api.lyrics.ovh/v1/' + song.artists[0].name + '/' + song.name)
+  return fetch('https://lrclib.net/api/get?artist_name=' + song.artists[0].name + '&track_name=' + song.name)
     .then(response => response.json())
     .then((data) => {
       // console.log("Fetched lyrics:", data);
-      return data.lyrics as string;
+      return data.plainLyrics as string;
     })
 }
 
@@ -332,30 +334,60 @@ function login() {
 }
 
 function checkAnswer(e) {
+  $("button.answerButton").prop("disabled", true);
   console.log("Clicked answer:", e);
   if(e.target.innerText === currentQuestionSong.value.correctAnswer){
     console.log("Correct answer!");
+    if(score.value == undefined){
+      score.value = 0;
+    }
+    score.value++;
     e.target.style.backgroundColor = "#90ee9038";
   }
   else{
     console.log("Wrong answer!");
     e.target.style.backgroundColor = "#f0808045";
   }
+
+  console.log("question " + (!currentQuestionSong.value.question == true) + " score " + (score.value != undefined) + ":" + score.value );
+  setTimeout(() => {
+    setNextQuestion();
+  }, 800);
 }
 
+function setNextQuestion() {
+  console.log("question " + (!currentQuestionSong.value.question == true) + " score " + (score.value != undefined) + ":" + score.value );
+
+  $("button.answerButton").prop("disabled", false);
+  $("button.answerButton").css("background-color", "var(--color-background)");
+  const idx = questionIdices.pop();
+  console.log("questionIdices:", questionIdices);
+  console.log("Next question index:", idx);
+  if (idx === undefined) {
+    console.log("No more questions available.");
+    currentQuestionSong.value.question = undefined;
+    return
+  }
+  const song = sptfySongs[idx];
+  if (song === undefined) {
+    console.error("No song found for question index:", idx);
+    return;
+  }
+  currentQuestionSong.value = prepareQuestion(songList.get(song) || '', song);
+} 
 /**
  * Starts the game by fetching user's top song
  */
 function start() {
   console.log("Starting the game...");
-  fetchSongs(20).then(songs => {
+  fetchSongs(30).then(songs => {
     console.log("Fetched songs:", songs);
     sptfySongs = songs;
-    songs.forEach(song => {
+    sptfySongs.forEach(song => {
       fetchLyrics(song).then(lyrics => {
         if(lyrics == undefined || lyrics == null){
           // songList.delete(song);
-          songs.splice(songs.indexOf(song), 1);
+          sptfySongs.splice(sptfySongs.indexOf(song), 1);
           console.log("Deleted song from array due to missing lyrics:", song.name);
         }
         else{
@@ -364,18 +396,13 @@ function start() {
         console.log("Updated song list map with lyrics: ", songList.size);
         
         if(songList.size >= numberOfQuestions){
-          console.log("Collected enough songs for questions.", currentQuestionSong);
           if (currentQuestionSong.value.lyrics === ''){
-            currentQuestionSong.value = prepareQuestion(lyrics, song);
+            console.log("Collected enough songs for questions.", currentQuestionSong);
+            setNextQuestion();
           }
-          // setUpQuestion();
         }
       }).catch(error => {
         console.error("Error fetching lyrics for song", song.name, ":", error);
-        if(songList.size >= numberOfQuestions){
-          console.log("Collected enough songs for questions.", currentQuestionSong);
-          // setUpQuestion();
-        }
       });
     });
 
@@ -419,7 +446,7 @@ if (localStorage.getItem('code_verifier') != null) {
 <template>
   <div class="greetings">
     <h1 class="green">{{ msg }}</h1>
-    <div v-if="!currentQuestionSong.question">
+    <div v-if="currentQuestionSong.question == undefined && score == undefined">
       <h3>
         Welcome to the Lyriquiz app!
         Test your knowledge of song lyrics and have fun!
@@ -427,14 +454,17 @@ if (localStorage.getItem('code_verifier') != null) {
       <button v-if="hasAccessToken" @click="start">Start</button>
       <button v-else @click="login">Login</button>
     </div>
-    <div v-else>
+    <div v-if="currentQuestionSong.question != undefined">
       <p>Which song are this lyrics from?</p>
       <h3>{{ currentQuestionSong.question }}</h3>
       <!-- <p>{{ currentQuestionSong.correctAnswer }}</p> -->
-      <button @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[0] }}</button>
-      <button @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[1] }}</button>
-      <button @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[2] }}</button>
-      <button @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[3] }}</button>
+      <button class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[0] }}</button>
+      <button class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[1] }}</button>
+      <button class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[2] }}</button>
+      <button class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[3] }}</button>
+    </div>
+    <div v-if="currentQuestionSong.question ==  undefined && score != undefined">
+      <h3>You scored {{ score }} of {{ numberOfQuestions }}!</h3>
     </div>
   </div>
 </template>
@@ -452,19 +482,23 @@ h3 {
 }
 
 button {
-  border: 2px solid hsla(160, 100%, 37%, 1);
+  border: 2px solid rgb(0, 0, 0);
   background-color: var(--color-background);
   color: var(--color-text);
+  display: block;
   font-size: 1.2rem;
   padding: 2% 5%;
   margin-top: 5%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 button:hover {
-  background-color: hsla(160, 100%, 37%, 0.1);
+  background-color: hsla(0, 0%, 72%, 0.1);
   cursor: pointer;
 }
 
+.greetings p,
 .greetings h1,
 .greetings h3 {
   text-align: center;
@@ -472,9 +506,15 @@ button:hover {
 
 @media (min-width: 1024px) {
 
+  .greetings p,
   .greetings h1,
   .greetings h3 {
     text-align: left;
+  }
+
+  button {
+    margin-left: unset;
+    margin-right: unset;
   }
 }
 </style>

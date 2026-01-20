@@ -16,11 +16,13 @@
   },
   "dependencies": {
     "express": "^5.2.1",
+    "jquery": "^4.0.0",
     "vue": "^3.5.25"
   },
   "devDependencies": {
     "@tsconfig/node24": "^24.0.3",
     "@types/express": "^5.0.6",
+    "@types/jquery": "^3.5.33",
     "@types/node": "^24.10.1",
     "@vitejs/plugin-basic-ssl": "^2.1.0",
     "@vitejs/plugin-vue": "^6.0.2",
