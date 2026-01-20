@@ -333,20 +333,21 @@ function login() {
   redirectToSpotifyLogin();
 }
 
-function checkAnswer(e) {
+function checkAnswer(e: MouseEvent): void {
+  const target = e.target as HTMLButtonElement;
   $("button.answerButton").prop("disabled", true);
   console.log("Clicked answer:", e);
-  if(e.target.innerText === currentQuestionSong.value.correctAnswer){
+  if(target.innerText === currentQuestionSong.value.correctAnswer){
     console.log("Correct answer!");
     if(score.value == undefined){
       score.value = 0;
     }
     score.value++;
-    e.target.style.backgroundColor = "#90ee9038";
+    target.style.backgroundColor = "#90ee9038";
   }
   else{
     console.log("Wrong answer!");
-    e.target.style.backgroundColor = "#f0808045";
+    target.style.backgroundColor = "#f0808045";
   }
 
   console.log("question " + (!currentQuestionSong.value.question == true) + " score " + (score.value != undefined) + ":" + score.value );
