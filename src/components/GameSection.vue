@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { Ref } from 'vue';
+import { animate, splitText, stagger } from 'animejs';
 import $ from 'jquery';
 
 // ============================================================================
@@ -60,6 +61,7 @@ questionIdices = randomizeArray(questionIdices);
 // const currentlyUsedSong: Song | null = null;
 let sptfySongs: Song[] = [];
 const score: Ref<number | undefined> = ref();
+let isFetching: boolean = false;
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -377,7 +379,30 @@ function checkAnswer(e: MouseEvent): void {
  * Starts the game by fetching user's top songs
  */
 function start() {
+  if(isFetching){
+    return;
+  }
   console.log("Starting the game...");
+  isFetching = true;
+  $("button.startButton").prop("disabled", true);
+  $("button.startButton").html("Loading...");
+
+  const { chars } = splitText('.startButton', {
+    chars: { wrap: 'clip' },
+  });
+
+  animate(chars, {
+    y: [
+      { to: ['100%', '0%'] },
+      { to: '-100%', delay: 750, ease: 'in(3)' }
+    ],
+    duration: 600,
+    ease: 'out(3)',
+    delay: stagger(100),
+    loop: true,
+  });
+
+
   fetchSongs(30).then(songs => {
     console.log("Fetched songs:", songs);
     sptfySongs = songs;
@@ -448,7 +473,7 @@ if (localStorage.getItem('code_verifier') != null) {
         Welcome to the Lyriquiz app!
         Test your knowledge of song lyrics and have fun!
       </h3>
-      <button v-if="hasAccessToken" @click="start">Start</button>
+      <button class="startButton" v-if="hasAccessToken" @click="start">Start</button>
       <button v-else @click="login">Login</button>
     </div>
     <div v-if="currentQuestionSong.question != undefined">
