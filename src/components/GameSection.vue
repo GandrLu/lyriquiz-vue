@@ -479,6 +479,7 @@ h1 {
 }
 
 h3 {
+  margin-top: 3%;
   font-size: 1.2rem;
 }
 
@@ -503,19 +504,5 @@ button:hover {
 .greetings h1,
 .greetings h3 {
   text-align: center;
-}
-
-@media (min-width: 1024px) {
-
-  .greetings p,
-  .greetings h1,
-  .greetings h3 {
-    text-align: left;
-  }
-
-  button {
-    margin-left: unset;
-    margin-right: unset;
-  }
 }
 </style>
