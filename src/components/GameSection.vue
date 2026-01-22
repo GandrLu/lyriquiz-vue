@@ -93,22 +93,12 @@ const base64encode = (input: ArrayBuffer) => {
     .replace(/\//g, '_');
 }
 
+/**
+ * Randomizes array order
+ */
 function randomizeArray<T>(array: T[]): T[] {
   return array.sort(() => Math.random() - 0.5);
 }
-
-// function setUpQuestion() {
-//   let idx = questionIdices.pop();
-//   if (idx === undefined) {
-//     idx = 0;
-//   }
-//   const song = sptfySongs[idx];
-//   if (song === undefined) {
-//     console.error("No song found for question index:", idx);
-//     return;
-//   }
-//   currentQuestionSong.value = { song: song, lyrics: songList.get(song) || '', correctAnswer: song.name };
-// } 
 
 /**
  * Extracts the parameters out of the redirected URI after Spotify login
@@ -127,69 +117,6 @@ function getHashParams(): Record<string, string> {
   }
 
   return params;
-}
-
-function prepareQuestion(fetchedLyrics: string, song: Song): Question {
-  /* Uses regex to collect the positions of break lines in the lyrics string */
-  const regex = /\n/gi;
-  let result: RegExpExecArray | null;
-  const indicies: number [] = [];
-  while( (result = regex.exec(fetchedLyrics)) ){
-    indicies.push(result.index);
-  }
-  if (indicies.length < 1){
-    indicies.push(0);
-  }
-
-  let questionSnippet = "";
-
-  for(let i = 0; i < 5; i++){
-    /* Gets a random index of the array with line break positions */
-    const randIndex = Math.floor( Math.random() * indicies.length );
-    
-    /* Slices the lyrics at the random line break position and at the position 3 line breaks before, 
-    so is ensured even if randomly the last position is choosen, that the other position exists. 
-    Stores this approx. 3 lines in the lyrics snippet property of the current question. */
-    const start = indicies[randIndex - 3] !== undefined ? indicies[randIndex - 3] : -1 + 1;
-    const end = indicies[randIndex] !== undefined ? indicies[randIndex] + 1 : fetchedLyrics.length;
-    questionSnippet = fetchedLyrics.slice(start, end);
-    if(questionSnippet.length < 20){
-      questionSnippet = fetchedLyrics.slice(0, Math.min(50, fetchedLyrics.length));
-    }
-    else{
-      break;
-    }
-  }
-
-  const newQuestion: Question = {
-    lyrics: fetchedLyrics,
-    question: questionSnippet,
-    correctAnswer: song.name,
-    wrongAnswers: [],
-    song: song
-  };
-  
-  let wrongAnswerIndices: number [] = [];
-  for (let i = 0; i < sptfySongs.length; i++) {
-    wrongAnswerIndices.push(i);
-  }
-  wrongAnswerIndices = randomizeArray(wrongAnswerIndices);
-
-  newQuestion.wrongAnswers?.push(song.name);
-  for (let i = 0; i < sptfySongs.length; i++) {
-    const idx = wrongAnswerIndices.pop();
-    if(idx !== undefined && sptfySongs[idx] !== undefined && sptfySongs[idx] !== song){
-      newQuestion.wrongAnswers?.push(sptfySongs[idx].name);
-    }
-    if(newQuestion.wrongAnswers === undefined || newQuestion.wrongAnswers.length >= 4){
-      console.log("break");
-      break;
-    }
-  };
-  newQuestion.wrongAnswers = randomizeArray(newQuestion.wrongAnswers || []);
-
-  return newQuestion;
-  //debugging console.log("Questions: ", this.Questions);
 }
 
 // ============================================================================
@@ -323,6 +250,93 @@ function fetchLyrics(song: Song): Promise<string> {
 }
 
 // ============================================================================
+// QUESTION & GAME LOGIC
+// ============================================================================
+
+function prepareQuestion(fetchedLyrics: string, song: Song): Question {
+  /* Uses regex to collect the positions of break lines in the lyrics string */
+  const regex = /\n/gi;
+  let result: RegExpExecArray | null;
+  const indicies: number [] = [];
+  while( (result = regex.exec(fetchedLyrics)) ){
+    indicies.push(result.index);
+  }
+  if (indicies.length < 1){
+    indicies.push(0);
+  }
+
+  let questionSnippet = "";
+
+  for(let i = 0; i < 5; i++){
+    /* Gets a random index of the array with line break positions */
+    const randIndex = Math.floor( Math.random() * indicies.length );
+    
+    /* Slices the lyrics at the random line break position and at the position 3 line breaks before, 
+    so is ensured even if randomly the last position is choosen, that the other position exists. 
+    Stores this approx. 3 lines in the lyrics snippet property of the current question. */
+    const start = indicies[randIndex - 3] !== undefined ? indicies[randIndex - 3] : -1 + 1;
+    const end = indicies[randIndex] !== undefined ? indicies[randIndex] + 1 : fetchedLyrics.length;
+    questionSnippet = fetchedLyrics.slice(start, end);
+    if(questionSnippet.length < 20){
+      questionSnippet = fetchedLyrics.slice(0, Math.min(50, fetchedLyrics.length));
+    }
+    else{
+      break;
+    }
+  }
+
+  const newQuestion: Question = {
+    lyrics: fetchedLyrics,
+    question: questionSnippet,
+    correctAnswer: song.name,
+    wrongAnswers: [],
+    song: song
+  };
+  
+  let wrongAnswerIndices: number [] = [];
+  for (let i = 0; i < sptfySongs.length; i++) {
+    wrongAnswerIndices.push(i);
+  }
+  wrongAnswerIndices = randomizeArray(wrongAnswerIndices);
+
+  newQuestion.wrongAnswers?.push(song.name);
+  for (let i = 0; i < sptfySongs.length; i++) {
+    const idx = wrongAnswerIndices.pop();
+    if(idx !== undefined && sptfySongs[idx] !== undefined && sptfySongs[idx] !== song){
+      newQuestion.wrongAnswers?.push(sptfySongs[idx].name);
+    }
+    if(newQuestion.wrongAnswers === undefined || newQuestion.wrongAnswers.length >= 4){
+      console.log("break");
+      break;
+    }
+  };
+  newQuestion.wrongAnswers = randomizeArray(newQuestion.wrongAnswers || []);
+
+  return newQuestion;
+}
+
+function setNextQuestion() {
+  console.log("question " + (!currentQuestionSong.value.question == true) + " score " + (score.value != undefined) + ":" + score.value );
+
+  $("button.answerButton").prop("disabled", false);
+  $("button.answerButton").css("background-color", "var(--color-background)");
+  const idx = questionIdices.pop();
+  console.log("questionIdices:", questionIdices);
+  console.log("Next question index:", idx);
+  if (idx === undefined) {
+    console.log("No more questions available.");
+    currentQuestionSong.value.question = undefined;
+    return
+  }
+  const song = sptfySongs[idx];
+  if (song === undefined) {
+    console.error("No song found for question index:", idx);
+    return;
+  }
+  currentQuestionSong.value = prepareQuestion(songList.get(song) || '', song);
+}
+
+// ============================================================================
 // USER ACTIONS
 // ============================================================================
 
@@ -333,6 +347,9 @@ function login() {
   redirectToSpotifyLogin();
 }
 
+/**
+ * Validates the user's answer selection
+ */
 function checkAnswer(e: MouseEvent): void {
   const target = e.target as HTMLButtonElement;
   $("button.answerButton").prop("disabled", true);
@@ -356,28 +373,8 @@ function checkAnswer(e: MouseEvent): void {
   }, 800);
 }
 
-function setNextQuestion() {
-  console.log("question " + (!currentQuestionSong.value.question == true) + " score " + (score.value != undefined) + ":" + score.value );
-
-  $("button.answerButton").prop("disabled", false);
-  $("button.answerButton").css("background-color", "var(--color-background)");
-  const idx = questionIdices.pop();
-  console.log("questionIdices:", questionIdices);
-  console.log("Next question index:", idx);
-  if (idx === undefined) {
-    console.log("No more questions available.");
-    currentQuestionSong.value.question = undefined;
-    return
-  }
-  const song = sptfySongs[idx];
-  if (song === undefined) {
-    console.error("No song found for question index:", idx);
-    return;
-  }
-  currentQuestionSong.value = prepareQuestion(songList.get(song) || '', song);
-} 
 /**
- * Starts the game by fetching user's top song
+ * Starts the game by fetching user's top songs
  */
 function start() {
   console.log("Starting the game...");
@@ -387,7 +384,6 @@ function start() {
     sptfySongs.forEach(song => {
       fetchLyrics(song).then(lyrics => {
         if(lyrics == undefined || lyrics == null){
-          // songList.delete(song);
           sptfySongs.splice(sptfySongs.indexOf(song), 1);
           console.log("Deleted song from array due to missing lyrics:", song.name);
         }
