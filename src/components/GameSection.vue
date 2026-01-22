@@ -49,7 +49,10 @@ const hasAccessToken = ref(!!localStorage.getItem('access_token'));
 
 const currentQuestionSong: Ref<Question> = ref({
   lyrics: '',
-  song: { album: { name: null }, name: '', artists: [{ "name": "" }] }
+  question: undefined,
+  correctAnswer: undefined,
+  wrongAnswers: undefined,
+  song: { album: { name: null }, name: '', artists: [{ name: '' }] }
 });
 
 const songList = new Map<Song, string>();
@@ -60,7 +63,7 @@ for (let i = 0; i < numberOfQuestions; i++) {
 questionIdices = randomizeArray(questionIdices);
 // const currentlyUsedSong: Song | null = null;
 let sptfySongs: Song[] = [];
-const score: Ref<number | undefined> = ref();
+const score: Ref<number | undefined> = ref(undefined);
 let isFetching: boolean = false;
 
 // ============================================================================
@@ -163,6 +166,9 @@ const getToken = async function (code: string) {
   localStorage.setItem('refresh_token', response.refresh_token);
   localStorage.setItem('access_token_expiration',
     (Date.now() + response.expires_in * 1000).toString());
+  if(response.access_token){
+    hasAccessToken.value = true;
+  }
 }
 
 const getRefreshToken = async function () {
@@ -236,7 +242,7 @@ function fetchSongs(limit: number = 1): Promise<Song[]> {
   return fetch('https://api.spotify.com/v1/me/top/tracks?time_range=long_term&limit=' + limit, { headers })
     .then(response => response.json())
     .then((data) => {
-      console.log("Fetched data:", data);
+      // console.log("Fetched data:", data);
       return data.items as Song[];
     })
 }
@@ -326,7 +332,7 @@ function setNextQuestion() {
   console.log("questionIdices:", questionIdices);
   console.log("Next question index:", idx);
   if (idx === undefined) {
-    console.log("No more questions available.");
+    console.log("No more questions available." + score.value);
     currentQuestionSong.value.question = undefined;
     return
   }
@@ -415,10 +421,12 @@ function start() {
         else{
           songList.set(song, lyrics);
         }
-        console.log("Updated song list map with lyrics: ", songList.size);
+        // console.log("Updated song list map with lyrics: ", songList.size);
         
         if(songList.size >= numberOfQuestions){
-          if (currentQuestionSong.value.lyrics === ''){
+          // console.log("Lyrics: " + currentQuestionSong.value.lyrics.length);
+          // console.log(currentQuestionSong.value);
+          if (currentQuestionSong.value.question == undefined){
             console.log("Collected enough songs for questions.", currentQuestionSong);
             setNextQuestion();
           }
@@ -428,7 +436,7 @@ function start() {
       });
     });
 
-    console.log("Song list map:", songList);
+    // console.log("Song list map:", songList);
     
   }).catch(error => {
     console.error("Error fetching songs:", error);
