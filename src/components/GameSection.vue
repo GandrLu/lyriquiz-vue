@@ -60,8 +60,10 @@ const songList = new Map<Song, string>();
 let sptfySongs: Song[] = [];
 const score: Ref<number | undefined> = ref(undefined);
 let isFetching: boolean = false;
+let numberOfLyricsAvailable: number = 0;
 let currentQuestionIndex: number = 0;
 let currentGameRound: number = 1;
+const isReplayPossible = ref(false);
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -326,7 +328,7 @@ function prepareQuestion(fetchedLyrics: string, song: Song): Question {
   };
   newQuestion.wrongAnswers = randomizeArray(newQuestion.wrongAnswers || []);
 
-  console.log("Prepared question:", newQuestion);
+  console.log("Prepared question:", newQuestion.correctAnswer);
 
   return newQuestion;
 }
@@ -343,6 +345,7 @@ function setNextQuestion() {
     || currentQuestionIndex + 1 > numberOfQuestions * currentGameRound) {
     console.log("No more questions available. " + score.value);
     currentQuestionSong.value.question = undefined;
+    isReplayPossible.value = (currentGameRound + 1) * numberOfQuestions <= numberOfLyricsAvailable;
     return
   }
   else {
@@ -444,6 +447,7 @@ function start() {
         }
         else{
           songList.set(song, lyrics);
+          numberOfLyricsAvailable++;
         }
         // console.log("Updated song list map with lyrics: ", songList.size);
         
@@ -530,7 +534,8 @@ if (localStorage.getItem('code_verifier') != null) {
     </div>
     <div v-if="currentQuestionSong.question ==  undefined && score != undefined">
       <h3>You scored {{ score }} of {{ numberOfQuestions }}!</h3>
-      <button @click="replay">Play Again</button>
+      <button v-if="isReplayPossible" @click="replay">Play Again</button>
+      <p v-else>No more questions for now.</p>
     </div>
     <p id="debugText" style="position: absolute; bottom: 5%; color: #a52a2a8c;"></p>
   </div>
