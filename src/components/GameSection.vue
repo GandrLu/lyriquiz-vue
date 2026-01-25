@@ -37,7 +37,7 @@ defineProps<{
 const stateKey = 'code_verifier';
 const client_id: string = '43cee162706f463dbb62be67258fbe2f';
 const redirect_uri: string = '0.0.0.0';
-const numberOfQuestions = 3;
+const numberOfQuestions = 5;
 
 // ============================================================================
 // REACTIVE STATE
@@ -56,15 +56,12 @@ const currentQuestionSong: Ref<Question> = ref({
 });
 
 const songList = new Map<Song, string>();
-let questionIdices: number [] = [];
-for (let i = 0; i < numberOfQuestions; i++) {
-  questionIdices.push(i);
-}
-questionIdices = randomizeArray(questionIdices);
 // const currentlyUsedSong: Song | null = null;
 let sptfySongs: Song[] = [];
 const score: Ref<number | undefined> = ref(undefined);
 let isFetching: boolean = false;
+let currentQuestionIndex: number = 0;
+let currentGameRound: number = 1;
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -248,11 +245,11 @@ function fetchSongs(limit: number = 1): Promise<Song[]> {
 }
 
 function fetchLyrics(song: Song): Promise<string> {
-  // Placeholder function to simulate fetching lyrics
+  console.log("Fetching lyrics for song:", song.name, "by", song.artists[0].name);
   return fetch('https://lrclib.net/api/get?artist_name=' + song.artists[0].name + '&track_name=' + song.name)
     .then(response => response.json())
     .then((data) => {
-      // console.log("Fetched lyrics:", data);
+      console.log("Fetched lyrics:", data.trackName);
       return data.plainLyrics as string;
     })
 }
@@ -285,18 +282,27 @@ function prepareQuestion(fetchedLyrics: string, song: Song): Question {
     const start = indicies[randIndex - 3] !== undefined ? indicies[randIndex - 3] : -1 + 1;
     const end = indicies[randIndex] !== undefined ? indicies[randIndex] + 1 : fetchedLyrics.length;
     questionSnippet = fetchedLyrics.slice(start, end);
-    if(questionSnippet.length < 20){
-      questionSnippet = fetchedLyrics.slice(0, Math.min(50, fetchedLyrics.length));
-    }
-    else{
+    if (questionSnippet.length > 20
+      && !questionSnippet.toLowerCase().includes(song.name.toLowerCase())) {
       break;
+      // questionSnippet = fetchedLyrics.slice(0, Math.min(50, fetchedLyrics.length));
     }
+  }
+
+  if (questionSnippet.includes('\n\n')) {
+    questionSnippet = questionSnippet.replace(/\n\n+/g, '\n');
+  }
+  if(questionSnippet.startsWith("\n")){
+    questionSnippet = questionSnippet.slice(1);
+  }
+  if(questionSnippet.endsWith("\n")){
+    questionSnippet = questionSnippet.slice(0, questionSnippet.length - 1);
   }
 
   const newQuestion: Question = {
     lyrics: fetchedLyrics,
     question: questionSnippet,
-    correctAnswer: song.name,
+    correctAnswer: song.name + " - " + song.artists[0].name,
     wrongAnswers: [],
     song: song
   };
@@ -307,11 +313,11 @@ function prepareQuestion(fetchedLyrics: string, song: Song): Question {
   }
   wrongAnswerIndices = randomizeArray(wrongAnswerIndices);
 
-  newQuestion.wrongAnswers?.push(song.name);
+  newQuestion.wrongAnswers?.push(song.name + " - " + song.artists[0].name);
   for (let i = 0; i < sptfySongs.length; i++) {
     const idx = wrongAnswerIndices.pop();
     if(idx !== undefined && sptfySongs[idx] !== undefined && sptfySongs[idx] !== song){
-      newQuestion.wrongAnswers?.push(sptfySongs[idx].name);
+      newQuestion.wrongAnswers?.push(sptfySongs[idx].name + " - " + sptfySongs[idx].artists[0].name);
     }
     if(newQuestion.wrongAnswers === undefined || newQuestion.wrongAnswers.length >= 4){
       console.log("break");
@@ -319,6 +325,8 @@ function prepareQuestion(fetchedLyrics: string, song: Song): Question {
     }
   };
   newQuestion.wrongAnswers = randomizeArray(newQuestion.wrongAnswers || []);
+
+  console.log("Prepared question:", newQuestion);
 
   return newQuestion;
 }
@@ -328,18 +336,17 @@ function setNextQuestion() {
 
   $("button.answerButton").prop("disabled", false);
   $("button.answerButton").css("background-color", "var(--color-background)");
-  const idx = questionIdices.pop();
-  console.log("questionIdices:", questionIdices);
-  console.log("Next question index:", idx);
-  if (idx === undefined) {
-    console.log("No more questions available." + score.value);
+  
+  console.log("Setting next question, current index:", currentQuestionIndex);
+  const song = sptfySongs[currentQuestionIndex + 1];
+  if (song === undefined
+    || currentQuestionIndex + 1 > numberOfQuestions * currentGameRound) {
+    console.log("No more questions available. " + score.value);
     currentQuestionSong.value.question = undefined;
     return
   }
-  const song = sptfySongs[idx];
-  if (song === undefined) {
-    console.error("No song found for question index:", idx);
-    return;
+  else {
+    currentQuestionIndex++;
   }
   currentQuestionSong.value = prepareQuestion(songList.get(song) || '', song);
 }
@@ -362,11 +369,11 @@ function checkAnswer(e: MouseEvent): void {
   const target = e.target as HTMLButtonElement;
   $("button.answerButton").prop("disabled", true);
   console.log("Clicked answer:", e);
+  if(score.value == undefined){
+    score.value = 0;
+  }
   if(target.innerText === currentQuestionSong.value.correctAnswer){
     console.log("Correct answer!");
-    if(score.value == undefined){
-      score.value = 0;
-    }
     score.value++;
     target.style.backgroundColor = "#90ee9038";
   }
@@ -410,8 +417,17 @@ function start() {
 
 
   fetchSongs(30).then(songs => {
-    console.log("Fetched songs:", songs);
-    sptfySongs = songs;
+    let log: string = "Fetched songs:\n";
+    songs.forEach(song => {
+      log += song.artists[0].name + "-" + song.name + "\n";
+    });
+    console.log(log);
+    sptfySongs = randomizeArray(songs);
+    let logAfter: string = "Fetched songs:\n";
+    sptfySongs.forEach(song => {
+      logAfter += song.artists[0].name + "-" + song.name + "\n";
+    });
+    console.log(logAfter);
     sptfySongs.forEach(song => {
       fetchLyrics(song).then(lyrics => {
         if(lyrics == undefined || lyrics == null){
@@ -423,10 +439,15 @@ function start() {
         }
         // console.log("Updated song list map with lyrics: ", songList.size);
         
-        if(songList.size >= numberOfQuestions){
-          // console.log("Lyrics: " + currentQuestionSong.value.lyrics.length);
-          // console.log(currentQuestionSong.value);
-          if (currentQuestionSong.value.question == undefined){
+        if (currentQuestionSong.value.question == undefined) {
+          const hasEnoughSongs = sptfySongs
+            .slice(0, numberOfQuestions)
+            .every(song => {
+              const lyrics = songList.get(song);
+              return lyrics !== undefined && lyrics.length > 0;
+            });
+
+          if (hasEnoughSongs) {
             console.log("Collected enough songs for questions.", currentQuestionSong);
             setNextQuestion();
           }
@@ -441,6 +462,12 @@ function start() {
   }).catch(error => {
     console.error("Error fetching songs:", error);
   });
+}
+
+function replay() {
+  score.value = undefined;
+  currentGameRound++;
+  setNextQuestion();
 }
 
 // ============================================================================
@@ -495,7 +522,9 @@ if (localStorage.getItem('code_verifier') != null) {
     </div>
     <div v-if="currentQuestionSong.question ==  undefined && score != undefined">
       <h3>You scored {{ score }} of {{ numberOfQuestions }}!</h3>
+      <button @click="replay">Play Again</button>
     </div>
+    <p id="debugText" style="position: absolute; bottom: 5%; color: #a52a2a8c;"></p>
   </div>
 </template>
 
@@ -510,6 +539,8 @@ h1 {
 h3 {
   margin-top: 3%;
   font-size: 1.2rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 button {
