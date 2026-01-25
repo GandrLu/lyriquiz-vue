@@ -380,6 +380,14 @@ function checkAnswer(e: MouseEvent): void {
   else{
     console.log("Wrong answer!");
     target.style.backgroundColor = "#f0808045";
+    currentQuestionSong.value.wrongAnswers?.forEach((answer, index) => {
+      if(answer === currentQuestionSong.value.correctAnswer){
+        const correctButton = document.getElementById("answer" + index);
+        if(correctButton){
+          correctButton.style.backgroundColor = "#40664038";
+        }
+      }
+    });
   }
 
   console.log("question " + (!currentQuestionSong.value.question == true) + " score " + (score.value != undefined) + ":" + score.value );
@@ -515,10 +523,10 @@ if (localStorage.getItem('code_verifier') != null) {
       <p>Which song are this lyrics from?</p>
       <h3>{{ currentQuestionSong.question }}</h3>
       <!-- <p>{{ currentQuestionSong.correctAnswer }}</p> -->
-      <button class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[0] }}</button>
-      <button class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[1] }}</button>
-      <button class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[2] }}</button>
-      <button class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[3] }}</button>
+      <button id="answer0" class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[0] }}</button>
+      <button id="answer1" class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[1] }}</button>
+      <button id="answer2" class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[2] }}</button>
+      <button id="answer3" class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[3] }}</button>
     </div>
     <div v-if="currentQuestionSong.question ==  undefined && score != undefined">
       <h3>You scored {{ score }} of {{ numberOfQuestions }}!</h3>
