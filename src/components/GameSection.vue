@@ -477,6 +477,10 @@ function start() {
 }
 
 function replay() {
+  if(isReplayPossible.value == false){
+    location.reload();
+    return;
+  }
   score.value = undefined;
   currentGameRound++;
   setNextQuestion();
@@ -534,8 +538,7 @@ if (localStorage.getItem('code_verifier') != null) {
     </div>
     <div v-if="currentQuestionSong.question ==  undefined && score != undefined">
       <h3>You scored {{ score }} of {{ numberOfQuestions }}!</h3>
-      <button v-if="isReplayPossible" @click="replay">Play Again</button>
-      <p v-else>No more questions for now.</p>
+      <button @click="replay">Play Again</button>
     </div>
     <p id="debugText" style="position: absolute; bottom: 5%; color: #a52a2a8c;"></p>
   </div>
