@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import type { Ref } from 'vue';
 import { animate, splitText, stagger } from 'animejs';
 import $ from 'jquery';
@@ -491,30 +491,32 @@ function replay() {
 // COMPONENT INITIALIZATION
 // ============================================================================
 
-console.log('Login component loaded')
+onMounted(() => {
+  console.log('Login component loaded')
 
-if (localStorage.getItem('code_verifier') != null) {
-  params = getHashParams();
-  console.log("Authenticated:", params);
+  if (localStorage.getItem('code_verifier') != null) {
+    params = getHashParams();
+    console.log("Authenticated:", params);
 
-  const access_token = localStorage.getItem('access_token');
-  const access_token_expiration = Number(localStorage.getItem('access_token_expiration'));
-  if (access_token != null) {
-    console.log("Access token already exists:", access_token);
-    if (access_token_expiration != null && access_token_expiration > Date.now()) {
-      console.log("Access token is still valid.");
+    const access_token = localStorage.getItem('access_token');
+    const access_token_expiration = Number(localStorage.getItem('access_token_expiration'));
+    if (access_token != null) {
+      console.log("Access token already exists:", access_token);
+      if (access_token_expiration != null && access_token_expiration > Date.now()) {
+        console.log("Access token is still valid.");
+      } else {
+        console.log("Access token has expired. Need to re-authenticate.");
+        getRefreshToken();
+      }
+      hasAccessToken.value = true;
     } else {
-      console.log("Access token has expired. Need to re-authenticate.");
-      getRefreshToken();
+      console.log("Exchanging code for access token...");
+      getToken(params.code || '');
     }
-    hasAccessToken.value = true;
   } else {
-    console.log("Exchanging code for access token...");
-    getToken(params.code || '');
+    console.log("Not authenticated");
   }
-} else {
-  console.log("Not authenticated");
-}
+})
 </script>
 
 <template>
