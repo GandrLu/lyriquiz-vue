@@ -38,37 +38,38 @@ const stateKey = 'code_verifier';
 const client_id: string = '43cee162706f463dbb62be67258fbe2f';
 const redirect_uri: string = '0.0.0.0';
 const numberOfQuestions = 5;
+const songList = new Map<Song, string>();
 
 // ============================================================================
 // REACTIVE STATE
 // ============================================================================
 
-let params: Record<string, string> = {};
+const areAnswersLocked = ref(false);
 const hasAccessToken = ref(!!localStorage.getItem('access_token'));
-// const topSong = ref({ 'name': 'Testname', 'artist': 'Testartist' });
-
-const currentQuestionSong: Ref<Question> = ref({
-  lyrics: '',
-  question: undefined,
-  correctAnswer: undefined,
-  wrongAnswers: undefined,
-  song: { album: { name: null }, name: '', artists: [{ name: '' }] }
-});
-
-const songList = new Map<Song, string>();
-// const currentlyUsedSong: Song | null = null;
-let sptfySongs: Song[] = [];
 const score: Ref<number | undefined> = ref(undefined);
+  const currentQuestionSong: Ref<Question> = ref({
+    lyrics: '',
+    question: undefined,
+    correctAnswer: undefined,
+    wrongAnswers: undefined,
+    song: { album: { name: null }, name: '', artists: [{ name: '' }] }
+  });
+  
+// ============================================================================
+// MODULE-SCOPED VARIABLES
+// ============================================================================
+
 let isFetching: boolean = false;
+let isReplayPossible = false;
+let params: Record<string, string> = {};
+let sptfySongs: Song[] = [];
 let numberOfLyricsAvailable: number = 0;
 let currentQuestionIndex: number = 0;
 let currentGameRound: number = 1;
-const isReplayPossible = ref(false);
 
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
-
 /**
  * Generates a random string of specified length
  */
@@ -336,7 +337,7 @@ function prepareQuestion(fetchedLyrics: string, song: Song): Question {
 function setNextQuestion() {
   console.log("question " + (!currentQuestionSong.value.question == true) + " score " + (score.value != undefined) + ":" + score.value );
 
-  $("button.answerButton").prop("disabled", false);
+  areAnswersLocked.value = false;
   $("button.answerButton").css("background-color", "var(--color-background)");
   
   console.log("Setting next question, current index:", currentQuestionIndex);
@@ -345,7 +346,7 @@ function setNextQuestion() {
     || currentQuestionIndex + 1 > numberOfQuestions * currentGameRound) {
     console.log("No more questions available. " + score.value);
     currentQuestionSong.value.question = undefined;
-    isReplayPossible.value = (currentGameRound + 1) * numberOfQuestions <= numberOfLyricsAvailable;
+    isReplayPossible = (currentGameRound + 1) * numberOfQuestions <= numberOfLyricsAvailable;
     return
   }
   else {
@@ -370,7 +371,7 @@ function login() {
  */
 function checkAnswer(e: MouseEvent): void {
   const target = e.target as HTMLButtonElement;
-  $("button.answerButton").prop("disabled", true);
+  areAnswersLocked.value = true;
   console.log("Clicked answer:", e);
   if(score.value == undefined){
     score.value = 0;
@@ -477,7 +478,7 @@ function start() {
 }
 
 function replay() {
-  if(isReplayPossible.value == false){
+  if(isReplayPossible == false){
     location.reload();
     return;
   }
@@ -531,10 +532,10 @@ if (localStorage.getItem('code_verifier') != null) {
       <p>Which song are this lyrics from?</p>
       <h3>{{ currentQuestionSong.question }}</h3>
       <!-- <p>{{ currentQuestionSong.correctAnswer }}</p> -->
-      <button id="answer0" class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[0] }}</button>
-      <button id="answer1" class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[1] }}</button>
-      <button id="answer2" class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[2] }}</button>
-      <button id="answer3" class="answerButton" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[3] }}</button>
+      <button id="answer0" class="answerButton" :disabled="areAnswersLocked" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[0] }}</button>
+      <button id="answer1" class="answerButton" :disabled="areAnswersLocked" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[1] }}</button>
+      <button id="answer2" class="answerButton" :disabled="areAnswersLocked" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[2] }}</button>
+      <button id="answer3" class="answerButton" :disabled="areAnswersLocked" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[3] }}</button>
     </div>
     <div v-if="currentQuestionSong.question ==  undefined && score != undefined">
       <h3>You scored {{ score }} of {{ numberOfQuestions }}!</h3>
