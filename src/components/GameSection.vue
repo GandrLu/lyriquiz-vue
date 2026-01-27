@@ -120,28 +120,33 @@ onMounted(() => {
   initializeAuth();
 })
 </script>
-
 <template>
   <div class="greetings">
     <h1 class="green">{{ msg }}</h1>
     <div v-if="currentQuestionSong.question == undefined && score == undefined">
       <h3>
         Welcome to the Lyriquiz app!
-        Test your knowledge of song lyrics and have fun!
+        Test your knowledge of song lyrics.
+        <br />
+        It's using your Spotify top songs to create personal questions for you!
       </h3>
       <button class="startButton" v-if="hasAccessToken" :disabled="isFetching" @click="start">Start</button>
-      <button v-else @click="login">Login</button>
+      <button v-else @click="login">Login with Spotify</button>
     </div>
     <div v-if="currentQuestionSong.question != undefined">
       <p>Which song are this lyrics from?</p>
       <h3>{{ currentQuestionSong.question }}</h3>
       <!-- <p>{{ currentQuestionSong.correctAnswer }}</p> -->
-      <button id="answer0" class="answerButton" :disabled="areAnswersLocked" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[0] }}</button>
-      <button id="answer1" class="answerButton" :disabled="areAnswersLocked" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[1] }}</button>
-      <button id="answer2" class="answerButton" :disabled="areAnswersLocked" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[2] }}</button>
-      <button id="answer3" class="answerButton" :disabled="areAnswersLocked" @click="checkAnswer">{{ currentQuestionSong.wrongAnswers?.[3] }}</button>
+      <button id="answer0" class="answerButton" :disabled="areAnswersLocked" @click="checkAnswer">{{
+        currentQuestionSong.wrongAnswers?.[0] }}</button>
+      <button id="answer1" class="answerButton" :disabled="areAnswersLocked" @click="checkAnswer">{{
+        currentQuestionSong.wrongAnswers?.[1] }}</button>
+      <button id="answer2" class="answerButton" :disabled="areAnswersLocked" @click="checkAnswer">{{
+        currentQuestionSong.wrongAnswers?.[2] }}</button>
+      <button id="answer3" class="answerButton" :disabled="areAnswersLocked" @click="checkAnswer">{{
+        currentQuestionSong.wrongAnswers?.[3] }}</button>
     </div>
-    <div v-if="currentQuestionSong.question ==  undefined && score != undefined">
+    <div v-if="currentQuestionSong.question == undefined && score != undefined">
       <h3>You scored {{ score }} of {{ numberOfQuestions }}!</h3>
       <button @click="replay">Play Again</button>
     </div>
