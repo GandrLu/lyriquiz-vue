@@ -39,6 +39,8 @@ const {
 
 const isFetching = ref(false);
 
+let isLoggingIn = false;
+
 
 // ============================================================================
 // SPOTIFY AUTHENTICATION & API
@@ -47,7 +49,11 @@ const isFetching = ref(false);
 /**
  * Initiates Spotify login
  */
-function login() {
+function login(): void {
+  if(isLoggingIn){
+    return;
+  }
+  isLoggingIn = true;
   redirectToSpotifyLogin();
 }
 
@@ -57,20 +63,10 @@ function login() {
 // ============================================================================
 
 /**
- * Wrapper around game checkAnswer to also handle DOM styling
+ * Wrapper around game checkAnswer
  */
 function checkAnswer(e: MouseEvent): void {
   gameCheckAnswer(e);
-  
-  // Preserve button colors after check
-  setTimeout(() => {
-    const buttons = document.querySelectorAll('button.answerButton');
-    buttons.forEach(btn => {
-      if (btn.id.includes('answer')) {
-        // Colors will be preserved via Vue binding
-      }
-    });
-  }, 0);
 }
 
 
